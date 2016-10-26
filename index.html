@@ -1,29 +1,14 @@
 <!DOCTYPE html>
 <html>
 <head>
-   <script type="text/javascript" src="xmljson.js"></script>
    <link rel="stylesheet" type="text/css" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css"/>
-   <script type="text/javascript" src="https://code.jquery.com/jquery-3.1.1.min.js"></script>
 </head>
 
 <body>
    <div class="col-xs-12" style="text-align: center">
-      <h1>xmljson.js demo</h1>
-      <div>Type either XML or JSON into the appropriate box and click the button to convert it to the other format.</div>
+      <h1>xmlschema.js</h1>
+      <div>Demo coming soon.</div>
+      <div><a href="xmljson.html">xmljson.js demo</a></div>
    </div>
-   <div class="col-xs-5 col-xs-offset-1" style="text-align: center">JSON</div>
-   <div class="col-xs-5" style="text-align: center">XML</div>
-   <div class="col-xs-5 col-xs-offset-1"><textarea style="width: 100%; height: 500px" id="json"></textarea></div>
-   <div class="col-xs-5"><textarea style="width: 100%; height: 500px" id="xml"></textarea></div>
-   <div class="col-xs-5 col-xs-offset-1" style="text-align: center"><button id="jsonbtn">Convert to XML</button></div>
-   <div class="col-xs-5" style="text-align: center"><button id="xmlbtn">Convert to JSON</button></div>
 </body>
-<script type="text/javascript">
-   $("#jsonbtn").click(function(){
-      $("#xml").val(toXML($("#json").val()));
-   });
-   $("#xmlbtn").click(function(){
-      $("#json").val(JSON.stringify(toJSON($("#xml").val()), null, 2));
-   });
-</script>
 </html>
