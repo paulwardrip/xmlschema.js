@@ -1,8 +1,8 @@
 function toXML(json) {
-    var xml = "";
     
     function unwrap(tree, depth) {
-        if (!depth) depth = 0;
+        var xml = "";
+
         for (var node in tree) {
             if (typeof tree[node] === "object") {
                 if (tree[node] instanceof Array) {
@@ -14,7 +14,7 @@ function toXML(json) {
 
                         if (typeof tree[node][idx] === "object") {
                             xml += "\n";
-                            xml += toXML(tree[node][idx], depth + 1);
+                            xml += unwrap(tree[node][idx], depth + 1);
                             for (var i = 0; i < depth; i++) {
                                 xml += "\t";
                             }
@@ -23,6 +23,10 @@ function toXML(json) {
                         }
                         xml += "</" + node + ">\n";
                     }
+
+                } else if (node === "value" && tree.attributes !== undefined) {
+                    xml += tree[node];
+
                 } else if (node !== "attributes") {
                     for (var i = 0; i < depth; i++) {
                         xml += "\t";
@@ -32,25 +36,44 @@ function toXML(json) {
                     for (var a in tree[node].attributes) {
                         xml += " " + a + "=\"" + tree[node].attributes[a] + "\"";
                     }
-                    xml += ">\n";
 
-                    xml += toXML(tree[node], depth + 1);
+                    var subtext = unwrap(tree[node], depth + 1);
+                    if (subtext) {
+                        xml += ">";
+                        if (subtext.indexOf("<") > -1) xml += "\n";
+                        xml += subtext;
+
+                        if (subtext.indexOf("<") > -1) {
+                            for (var i = 0; i < depth; i++) {
+                                xml += "\t";
+                            }
+                        }
+                        xml += "</" + node + ">\n";
+                    } else {
+                        xml += " />\n";
+                    }
+                }
+            } else {
+                if (node === "value" && tree.attributes !== undefined) {
+                    xml += tree[node];
+
+                } else {
                     for (var i = 0; i < depth; i++) {
                         xml += "\t";
                     }
-                    xml += "</" + node + ">\n";
+                    xml += "<" + node + ">" + tree[node] + "</" + node + ">\n";
                 }
-            } else {
-                for (var i = 0; i < depth; i++) {
-                    xml += "\t";
-                }
-                xml += "<" + node + ">" + tree[node] + "</" + node + ">\n";
             }
         }
+        return xml;
     }
-    
-    unwrap(json, 0);
-    return xml;
+
+    var obj = json;
+    if (typeof obj === "string") {
+        obj = JSON.parse(obj);
+    }
+
+    return unwrap(obj, 0);
 }
 
 function toJSON(xml) {
@@ -87,39 +110,46 @@ function toJSON(xml) {
 
     function extract(node) {
         var obj = null;
+        var elements = false;
+
+        if (node.attributes) {
+            for (var child = 0; child < node.attributes.length; child++) {
+                if (!obj) obj = { attributes: {} };
+                obj.attributes[node.attributes[child].name] = node.attributes[child].value;
+            }
+        }
+
         node.childNodes.forEach(function (child) {
             if (child.nodeType === Node.ELEMENT_NODE) {
                 if (!obj) obj = {};
-                if (obj[child.tagName] && !obj[child.tagName] instanceof Array) {
-                    var first = obj[child.tagName];
-                    obj[child.tagName] = [ first ];
+
+                if (obj[child.tagName] !== undefined && !(obj[child.tagName] instanceof Array)) {
+                    console.log ("Array");
+                    obj[child.tagName] = [ obj[child.tagName] ];
                 }
+
                 if (obj[child.tagName] instanceof Array) {
                     obj[child.tagName].push(extract(child));
                 } else {
                     obj[child.tagName] = extract(child);
                 }
-            } else if (child.nodeType === Node.TEXT_NODE) {
-                obj = child.nodeValue;
+                elements = true;
             }
         });
 
-        node.attributes.forEach(function (child) {
-            if (typeof obj !== "object") {
-                var val = obj;
-                obj = { value: val };
+        if (!elements && node.firstChild) {
+            if (!obj) {
+                obj = node.firstChild.nodeValue;
+            } else {
+                obj.value = node.firstChild.nodeValue;
             }
-            if (!obj.attributes) {
-                obj.attributes = {};
-            }
-            obj.attributes[child.name] = child.value;
-        });
+        }
 
         return obj;
     }
 
     var doc = parse(xml);
-    return extract(doc.firstChild);
+    return extract(doc);
 }
 
 if (typeof module !== 'undefined') {
