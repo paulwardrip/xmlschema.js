@@ -20,9 +20,7 @@
 </body>
 <script type="text/javascript">
    $("#jsonbtn").click(function(){
-      var x = toXML($("#json").val());
-      console.log (x);
-      $("#xml").val(x.replace(/\t/g, "     "));
+      $("#xml").val(toXML($("#json").val()));
    });
    $("#xmlbtn").click(function(){
       $("#json").val(JSON.stringify(toJSON($("#xml").val()), null, 2));
