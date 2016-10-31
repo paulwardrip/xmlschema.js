@@ -2,13 +2,53 @@
 <html>
 <head>
    <link rel="stylesheet" type="text/css" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css"/>
+   <script type="text/javascript" src="https://code.jquery.com/jquery-3.1.1.min.js"></script>
+   <script type="text/javascript" src="xmlschema.js"></script>
 </head>
 
 <body>
    <div class="col-xs-12" style="text-align: center">
       <h1>xmlschema.js</h1>
-      <div>Demo coming soon.</div>
-      <div><a href="xmljson.html">xmljson.js demo</a></div>
+      <button id="validate">Validate</button>
+      <div><a href="demo/xmljson.html">xmljson.js demo</a></div>
    </div>
+   <div class="col-xs-6 col-xs-offset-1"><textarea style="width: 100%; height: 500px" id="xml"></textarea></div>
+   <div class="col-xs-4"><textarea style="width: 100%; height: 500px" id="xsd"></textarea></div>
+   <div class="col-xs-10 col-xs-offset-1" style="text-align: center">
+      <textarea style="width: 100%; height: 300px" id="log"></textarea>
+   </div>
+<script type="text/javascript">
+   function validate(xsd, xml, callback) {
+      xmlschema(xsd).validate(xml).then(function(result) {
+         if (result.valid) {
+            $("#log").text("The document is valid.");
+         } else {
+            var output = "";
+            result.errors.forEach(function (error) {
+               output += "ERROR: " + error + "\n";
+            });
+            result.warnings.forEach(function (warn) {
+               output += "WARNING: " + warn + "\n";
+            });
+            $("#log").text(output);
+         }
+         if (callback) {
+            callback(result);
+         }
+      });
+   }
+
+   $("#validate").click(function () {
+      $("#log").text("");
+      validate($("#xsd").val(), $("#xml").val());
+   });
+
+   validate('demo/pokemon.xsd', 'demo/pokemon.xml', function (result) {
+      $("#xml").text(result.xml.str);
+      $("#xsd").text(result.xsd.str);
+   })
+</script>
 </body>
+
+
 </html>

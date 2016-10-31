@@ -1,0 +1,21 @@
+<trainer xmlns="https://paulwardrip.github.io/xmlschema.js/demo/pokemon"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="https://paulwardrip.github.io/xmlschema.js/demo/pokemon pokemon.xsd">
+
+    <pokeball inventory="2" />
+    <potion inventory="1" />
+    <revive inventory="3" />
+
+    <team>
+        <pokemon id="1" level="4" hp="100" hpmax="100">
+            <name>Bulbasaur</name>
+            <type>poison</type>
+            <type>grass</type>
+        </pokemon>
+        <pokemon id="1">
+            <name>Bulbasaur</name>
+            <type>poison</type>
+            <type>grass</type>
+        </pokemon>
+    </team>
+</trainer>
