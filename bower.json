@@ -1,0 +1,21 @@
+{
+  "name": "xmlschema.js",
+  "main": "xmlschema.js",
+  "homepage": "https://github.com/paulwardrip/xmlschema.js",
+  "authors": [
+    "Paul Wardrip <paul.wardrip@turner.com>"
+  ],
+  "description": "A pure javascript implementation of xml schema (xsd) validation.",
+  "keywords": [
+    "xml",
+    "xsd",
+    "validation",
+    "schema"
+  ],
+  "license": "MIT",
+  "ignore": [
+    "demo",
+    "node_modules",
+    "bower_components"
+  ]
+}

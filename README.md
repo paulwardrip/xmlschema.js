@@ -1,6 +1,13 @@
 # xmlschema.js
-Implementation of XML schema validation in pure javascript, this project is currently incomplete, but I wanted to check it in. 
-This will validate xml against a schema, but I only implemented the features I required... the rest will be completed as I have
-time unless someone else wants to contribute to finish this work.
+Implementation of XML schema validation in Javascript. This supports most of the basic functions of xml schema
+validation. Some features used in complex schemas may not be implemented yet, these features may be provided in
+a future release. If someone would like to contribute to the project, these features could be implemented.
 
-Things that need doing still: attributes, groups, inline complexTypes ... more research.
+The following features of the xsd are not implemented:
+
+xs:import
+xs:include
+xs:key
+xs:redefine
+xs:union
+xs:unique
