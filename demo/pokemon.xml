@@ -7,15 +7,19 @@
     <revive inventory="3" />
 
     <team>
+        <!-- valid pokemon -->
         <pokemon id="1" level="4" hp="100" hpmax="100">
             <name>Bulbasaur</name>
             <type>poison</type>
             <type>grass</type>
         </pokemon>
+
+        <!-- invalid pokemon -->
         <pokemon id="1">
-            <name>Bulbasaur</name>
+            <name>Bulbasaur1</name>
             <type>poison</type>
             <type>grass</type>
+            <type>water</type>
         </pokemon>
     </team>
 </trainer>

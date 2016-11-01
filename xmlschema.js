@@ -4,168 +4,6 @@ var xmlschema = function (schema) {
         return Array.prototype.slice.call( doc.getElementsByTagName(name), 0 );
     }
 
-    function defer() {
-        if (typeof jQuery !== 'undefined') {
-            return $.Deferred();
-
-        } else if (typeof Promise !== 'undefined') {
-            return function () {
-                var resolve;
-                var reject;
-                var promise = new Promise(function (res, rej) {
-                    resolve = res;
-                    reject = rej;
-                });
-                return {
-                    promise: function () {
-                        return promise;
-                    },
-                    resolve: resolve,
-                    reject: reject
-                }
-            }();
-            
-        } else {
-            return function (){
-                var resolved = false;
-                var rejected = false;
-                var call = [];
-                var catcher = [];
-                var obj;
-                
-                return {
-                    resolve: function (result) {
-                        resolved = true;
-                        obj = result;
-                        call.forEach(function (callback) {
-                            callback(obj);
-                        });
-                    },
-                    
-                    reject: function (reason) {
-                        rejected = true;
-                        obj = reason;
-                        catcher.forEach(function (callback) {
-                            callback(obj);
-                        });
-                    },
-
-                    promise: {
-                        then: function (callback) {
-                            if (resolved) {
-                                callback(obj);
-                            } else {
-                                call.push(callback);
-                            }
-                        },
-                        catch: (function (callback) {
-                            if (rejected) {
-                                callback(obj);
-                            } else {
-                                catcher.push(callback);
-                            }
-                        })
-                    }
-                }
-            }();
-        }  
-    }
-
-    function parse(input) {
-        var out = { doc: null, str: null };
-        var deferred = defer();
-
-        function xmlString(str) {
-            if (typeof jQuery !== "undefined") {
-                out.doc = $.parseXML(str);
-                out.str = str;
-                deferred.resolve(out);
-
-            } else if (typeof DOMParser !== "undefined") {
-                var par = new DOMParser();
-                out.doc = par.parseFromString(str, "application/xml");
-                out.str = str;
-                deferred.resolve(out);
-            }
-        }
-
-        if (typeof input === "object") {
-            if (input instanceof XMLDocument) {
-                out.doc = input;
-                out.str = new XMLSerializer().serializeToString(input);
-
-                deferred.resolve(out);
-
-            } else if (typeof jQuery !== "undefined" && input instanceof jQuery) {
-                var body = ($(input.children()[0]).html());
-                var elem = input.children()[0].tagName;
-
-                var xstr = "<" + elem;
-                $.each(input.children()[0].attributes, function () {
-                   xstr += " " + this.name + "=\"" + this.value + "\"";
-                });
-                xstr += ">\n" + body + "\n<" + elem + ">";
-
-                xmlString(xstr);
-
-                deferred.resolve(out);
-            }
-
-        } else if (typeof input === "string") {
-            if (/\.(xml|xsd)$/.test(input)) {
-
-                if (typeof jQuery !== "undefined") {
-                    $.get(input, {}, function (xml) {
-                        xmlString(xml);
-                    }, "text");
-
-                } else {
-                    var xhr;
-                    if (typeof XMLHttpRequest !== 'undefined') {
-                        xhr = new XMLHttpRequest();
-
-                    } else if (typeof ActiveXObject !== 'undefined') {
-                        try {
-                            xhr = new ActiveXObject("Msxml2.XMLHTTP");
-                        } catch (e) {
-                            try {
-                                xhr = new ActiveXObject("Microsoft.XMLHTTP");
-                            } catch (E) {
-                                xhr = null;
-                            }
-                        }
-                    }
-
-                    if (xhr !== "undefined") {
-                        xhr.open('GET', input);
-                        xhr.setRequestHeader('Content-Type', 'application/xml');
-                        xhr.onreadystatechange = function () {
-                            if (this.readyState === 4) {
-                                if (this.status === 200) {
-                                    xmlString(this.responseText);
-                                } else {
-                                    out.error = "Unable to request document, response code: " + this.status;
-                                    deferred.resolve(out);
-                                }
-                            }
-                        };
-                        xhr.send(null);
-
-                    } else {
-                        out.error = "Unable to request document, browser does not support " +
-                            "XMLHttpRequest and jQuery is not available.";
-                        deferred.resolve(out);
-                    }
-
-                }
-            } else {
-                xmlString(input);
-            }
-        }
-
-        return deferred.promise();
-    }
-
     var xsd;
     var simpleTypes = {};
     var complexTypes = {};
@@ -208,81 +46,23 @@ var xmlschema = function (schema) {
             this.xml = inline;
         }
 
-        var restriction = this.xml.getElementsByTagName("restriction")[0];
-        if (restriction) {
-            this.base = this.xml.getElementsByTagName("restriction")[0].getAttribute("base");
-        }
-
-        this.length = (this.xml.getElementsByTagName("length")[0]) ?
-            this.xml.getElementsByTagName("length")[0].getAttribute("value") : 0;
-        this.minLength = (this.xml.getElementsByTagName("minLength")[0]) ?
-            this.xml.getElementsByTagName("minLength")[0].getAttribute("value") : 0;
-        this.maxLength = (this.xml.getElementsByTagName("maxLength")[0]) ?
-            this.xml.getElementsByTagName("maxLength")[0].getAttribute("value") : 0;
-        this.pattern = (this.xml.getElementsByTagName("pattern")[0]) ?
-            this.xml.getElementsByTagName("pattern")[0].getAttribute("value") : null;
-
-        this.isNumber = function () {
-            var datatype = false;
-            var base = this.base;
-            var types = [
-                "byte",
-                "decimal",
-                "double",
-                "int",
-                "float",
-                "integer",
-                "long",
-                "negativeInteger",
-                "nonNegativeInteger",
-                "nonPositiveInteger",
-                "positiveInteger",
-                "short",
-                "unsignedLong",
-                "unsignedInt",
-                "unsignedShort",
-                "unsignedByte"
-            ];
-            
-            types.some(function (type) {
-                if ("xs:" + type === base) {
-                    datatype = true;
-                    return true;
-                }
-            });
-
-            return datatype;
-        };
-
-        if (this.isNumber()){
-            this.fractionDigits = (this.xml.getElementsByTagName("fractionDigits")[0]) ?
-                this.xml.getElementsByTagName("fractionDigits")[0].getAttribute("value") : null;
-            this.maxInclusive = (this.xml.getElementsByTagName("maxInclusive")[0]) ?
-                this.xml.getElementsByTagName("maxInclusive")[0].getAttribute("value") : null;
-            this.maxExclusive = (this.xml.getElementsByTagName("maxExclusive")[0]) ?
-                this.xml.getElementsByTagName("maxExclusive")[0].getAttribute("value") : null;
-            this.minInclusive = (this.xml.getElementsByTagName("minInclusive")[0]) ?
-                this.xml.getElementsByTagName("minInclusive")[0].getAttribute("value") : null;
-            this.minExclusive = (this.xml.getElementsByTagName("minExclusive")[0]) ?
-                this.xml.getElementsByTagName("minExclusive")[0].getAttribute("value") : null;
-            this.totalDigits = (this.xml.getElementsByTagName("totalDigits")[0]) ?
-                this.xml.getElementsByTagName("totalDigits")[0].getAttribute("value") : null;
-        }
+        this.validator = new XsSimpleTypeValidator(this.xml, "<" + child.getAttribute("name") + ">");
 
         this.from = "xs:simpleType";
 
-        var enumeration = [];
-        this.enumeration = enumeration;
-
-        findbyname(this.xml, "enumeration").forEach(function (enumnode) {
-            enumeration.push(enumnode.getAttribute("value"));
-        });
     }
 
     function XsAny(child) {
         this.minOccurs = child.getAttribute("minOccurs") || 1;
         this.maxOccurs = child.getAttribute("maxOccurs") || 1;
         this.from = "xs:any";
+        this.number = any++;
+    }
+
+    function XsAnyAttribute(child) {
+        this.minOccurs = child.getAttribute("minOccurs") || 1;
+        this.maxOccurs = child.getAttribute("maxOccurs") || 1;
+        this.from = "xs:anyAttribute";
         this.number = any++;
     }
 
@@ -318,15 +98,23 @@ var xmlschema = function (schema) {
         this.type = child.getAttribute("type");
         this.name = child.getAttribute("name");
         this.required = (child.getAttribute("use") && child.getAttribute("use") === "required");
+        this.prohibited = (child.getAttribute("use") && child.getAttribute("use") === "prohibited");
 
         if (child.getAttribute("type")) {
             this.xml = simpleTypes[child.getAttribute("type")];
         } else if (child.getElementsByTagName("simpleType")) {
             this.xml = child.getElementsByTagName("simpleType")[0];
         }
+
+        if (this.xml) {
+            this.validator = new XsSimpleTypeValidator(this.xml, "@" + child.getAttribute("name"));
+        }
     }
 
     function readAttributes(child, validation) {
+        findbyname(child, "anyAttribute").forEach(function (any) {
+           validation.attributes.push(new XsAnyAttribute(any));
+        });
         findbyname(child, "attribute").forEach(function (attr) {
             validation.attributes.push(new XsAttribute(attr));
         });
@@ -411,10 +199,12 @@ var xmlschema = function (schema) {
         });
     }
 
-    var schemaLoad = parse(schema).then(function (result) {
+    var schemaLoad = xmlparser.parse(schema).then(function (result) {
         xsd = result;
 
         if (xsd.doc) {
+            xmlschemdocument = xsd.doc;
+
             xsd.doc.firstChild.childNodes.forEach(function (child) {
                 if (child.nodeType === Node.ELEMENT_NODE && child.tagName === "xs:simpleType") {
                     simpleTypes[child.getAttribute("name")] = child;
@@ -432,7 +222,7 @@ var xmlschema = function (schema) {
     });
 
     function validate (document, callback) {
-        var deferred = defer();
+        var deferred = xmlparser.deferred();
         var xml;
 
         if (callback) {
@@ -487,10 +277,43 @@ var xmlschema = function (schema) {
                             lastany = leaf.number;
 
                         } else if (leaf instanceof XsComplexType) {
-                            leaf.attributes.forEach(function (attr) {
-                                if (attr.required && !element.getAttribute(attr.name)) {
-                                    error("Attribute " + attr.name + " in <" + element.tagName + "> is required.");
+                            var attrcount = {};
+                            Array.prototype.slice.call(element.attributes).forEach(function (attr) {
+                                if (attr.name.indexOf("xmlns") === -1 && attr.name.indexOf("schemaLocation") === -1) {
+                                    var attrfound = false;
+                                    var anyattrfound = false;
+
+                                    leaf.attributes.forEach(function (vine) {
+                                        if (vine instanceof XsAnyAttribute) {
+                                            anyattrfound = true;
+                                        } else if (attr.name === vine.name) {
+                                            attrfound = true;
+                                            attrcount[attr.name] = (attrcount[attr.name] !== undefined) ?
+                                            attrcount[attr.name] + 1 : 1;
+
+                                            if (vine.prohibited) {
+                                                error("Attribute <" + element.tagName + " @" + attr.name + "> is prohibited.");
+                                            } else if (vine.validator !== undefined) {
+                                                var result = vine.validator.validate(attr.value);
+                                                if (!result.valid) {
+                                                    error(result.error);
+                                                }
+                                            }
+                                        }
+                                    });
+
+                                    if (!attrfound && !anyattrfound) {
+                                        error("Unexpected attribute <" + element.tagName + " @" + attr.name + ">");
+                                    }
                                 }
+                            });
+
+                            leaf.attributes.forEach(function (vine) {
+                               if (!attrcount[vine.name] && vine.required) {
+                                   error("Attribute is required <" + element.tagName + " @" + vine.name + ">");
+                               } else if (attrcount[vine.name] > 1) {
+                                   error("Duplicate attribute <" + element.tagName + " @" + vine.name + ">");
+                               }
                             });
 
                             queue.push({
@@ -502,75 +325,9 @@ var xmlschema = function (schema) {
 
                         } else if (leaf instanceof XsSimpleType) {
                             if (element.firstChild) {
-                                if (leaf.enumeration.length > 0) {
-                                    var isval = false;
-                                    leaf.enumeration.forEach(function (value) {
-                                        if (value === element.firstChild.nodeValue) {
-                                            isval = true;
-                                            return true;
-                                        }
-                                    });
-
-                                    if (!isval) {
-                                        error("Value of <" + element.tagName +
-                                            "> does not match enumerated options.");
-                                    }
-
-                                } else if (leaf.isNumber()) {
-                                    if (!/^[0-9.\-]*$/.test(element.firstChild.nodeValue)) {
-                                        error("Value of <" + element.tagName + "> should be numeric.");
-
-                                    } else if (leaf.minInclusive &&
-                                        parseFloat(element.firstChild.nodeValue) < leaf.minInclusive) {
-                                        error("Value of <" + element.tagName + "> should be greater than " +
-                                            leaf.minInclusive + " (inclusive).");
-
-                                    } else if (leaf.minExclusive &&
-                                        parseFloat(element.firstChild.nodeValue) <= leaf.minExclusive) {
-                                        error("Value of <" + element.tagName + "> should be greater than " +
-                                            leaf.minExclusive + " (exclusive).");
-
-                                    } else if (leaf.maxInclusive &&
-                                        parseFloat(element.firstChild.nodeValue) > leaf.maxInclusive) {
-                                        error("Value of <" + element.tagName + "> should be less than " +
-                                            leaf.maxInclusive + " (inclusive).");
-
-                                    } else if (leaf.maxExclusive &&
-                                        parseFloat(element.firstChild.nodeValue) >= leaf.maxExclusive) {
-                                        error("Value of <" + element.tagName + "> should be greater than " +
-                                            leaf.maxExclusive + " (exclusive).");
-
-                                    } else if (leaf.totalDigits && leaf.totalDigits
-                                        !== element.firstChild.nodeValue.replace(/\./, '').length) {
-                                        error("Value of <" + element.tagName + "> should be " +
-                                            leaf.totalDigits + " digits.");
-
-                                    } else if (leaf.fractionDigits && leaf.fractionDigits
-                                        < element.firstChild.nodeValue.split(/\./)[1].length) {
-                                        error("Value of <" + element.tagName + "> should have only " +
-                                            leaf.fractionDigits + " digits past the decimal.");
-                                    }
-
-                                } else if (leaf.base === "xs:string") {
-                                    if (leaf.length > 0 &&
-                                        element.firstChild.nodeValue.length !== leaf.length) {
-                                        error("Value of <" + element.tagName + "> should be exactly " +
-                                            leaf.length + "characters.");
-
-                                    } else if (leaf.minLength > 0 &&
-                                        element.firstChild.nodeValue.length < leaf.minLength) {
-                                        error("Value of <" + element.tagName + "> should be at least " +
-                                            leaf.minLength + "characters.");
-
-                                    } else if (leaf.maxLength > 0 &&
-                                        element.firstChild.nodeValue.length > leaf.maxLength) {
-                                        error("Value of <" + element.tagName + "> exceeds " +
-                                            leaf.maxLength + "characters.");
-
-                                    } else if (leaf.pattern && !new RegExp(leaf.pattern).test()) {
-                                        error("Value of <" + element.tagName +
-                                            "> does not match the specified pattern.");
-                                    }
+                                var result = leaf.validator.validate(element.firstChild.nodeValue);
+                                if (!result.valid) {
+                                    error(result.error);
                                 }
                             }
                         }
@@ -768,7 +525,7 @@ var xmlschema = function (schema) {
 
         }
 
-        parse(document).then(function(result) {
+        xmlparser.parse(document).then(function(result) {
             xml = result;
 
             schemaLoad.then(function() {
@@ -797,7 +554,19 @@ var xmlschema = function (schema) {
         return deferred.promise();
     }
 
-    return {
-        validate: validate
-    }
+    var library = {
+        validate: validate,
+        xmlparser: xmlparser
+    };
+
+    if (typeof xsdoptions !== "undefined") library.xsdoptions = xsdoptions;
+    if (typeof xmljson !== "undefined") library.xmljson = xmljson;
+
+    return library;
 };
+
+var xmlschemadocument;
+
+if (typeof module !== "undefined") {
+    module.exports = xmlschema;
+}

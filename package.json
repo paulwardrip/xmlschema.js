@@ -1,0 +1,20 @@
+{
+  "name": "xmlschema.js",
+  "version": "0.1.0",
+  "description": "Implementation of XML schema validation in Javascript.",
+  "main": "dist/xmlschema-all.min.js",
+  "dependencies": {},
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/paulwardrip/xmlschema.js.git"
+  },
+  "author": "Paul Wardrip",
+  "license": "MIT",
+  "private": false,
+  "devDependencies": {
+    "grunt": "^1.0.1",
+    "grunt-contrib-concat": "^1.0.1",
+    "grunt-contrib-uglify": "^1.0.1",
+    "grunt-contrib-watch": "^1.0.0"
+  }
+}

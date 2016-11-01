@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script type="text/javascript" src="../dist/xsdoptions.js"></script>
+    <link rel="stylesheet" type="text/css" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css"/>
+</head>
+
+<body>
+<div class="col-xs-12" style="text-align: center">
+    <h1>xsdoptions.js demo</h1>
+    <div>Reads XSD enumerations, validations and annotations.</div>
+</div>
+<div class="col-xs-4 col-xs-offset-2">
+    <div><label>Pokemon Type (loaded from //xs:simpleType/xs:enumeration):</label></div>
+    <div style="font-size: 8px">(Text below is //xs:simpleType/xs:annotation/xs:documentation)</div>
+    <div id="pokemonTypeAnnotation"></div>
+    <div><select id="pokemonType"></select></div>
+</div>
+<div class="col-xs-4">
+    <div><label>Pokemon Name (validated using //xs:simpleType: </label></div>
+    <div style="font-size: 8px">(Text below is //xs:simpleType/xs:annotation/xs:documentation)</div>
+    <div id="pokemonNameAnnotation"></div>
+    <div><input type="text" id="pokemonName"/>&nbsp;<span id="valid"></span></div>
+    <div id="error"></div>
+</div>
+</body>
+<script type="text/javascript">
+xsdoptions("pokemon.xsd").then(function (api) {
+    api.select("#pokemonType", "PokemonType");
+    api.annotation.property("#pokemonType", "title", "PokemonType");
+    api.annotation.html("#pokemonTypeAnnotation", "PokemonType");
+
+    document.getElementById("pokemonName").onkeyup = function () {
+        var result = (api.validate(document.getElementById("pokemonName").value, "PokemonName"));
+        document.getElementById("valid").innerHTML = (result.valid) ? "Valid" : "Invalid";
+        document.getElementById("error").innerHTML = (!result.valid) ? result.error : "";
+    };
+    api.annotation.html("#pokemonNameAnnotation", "PokemonName");
+});
+</script>
+</html>

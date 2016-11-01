@@ -152,8 +152,4 @@ var xmljson = {
         var doc = parse(xml);
         return extract(doc);
     }
-}
-
-if (typeof module !== 'undefined') {
-    module.exports = xmljson;
-}
+};
