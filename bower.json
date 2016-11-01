@@ -1,6 +1,6 @@
 {
   "name": "xmlschema.js",
-  "main": "dist/xmlschema-all.min.js",
+  "main": "dist/xmlschema-all.js",
   "homepage": "https://github.com/paulwardrip/xmlschema.js",
   "authors": [
     "Paul Wardrip <paul.wardrip@turner.com>"
