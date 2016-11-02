@@ -31,12 +31,16 @@
         </xs:sequence>
     </xs:complexType>
 
-    <xs:complexType name="Pokemon">
-        <xs:attribute name="id" use="required" />
+    <xs:group name="PokemonElements">
         <xs:sequence>
             <xs:element name="name" type="PokemonName" maxOccurs="1" minOccurs="1" />
             <xs:element name="type" type="PokemonType" minOccurs="1" maxOccurs="2" />
         </xs:sequence>
+    </xs:group>
+
+    <xs:complexType name="Pokemon">
+        <xs:group ref="PokemonElements" />
+        <xs:attribute name="id" use="required" />
     </xs:complexType>
 
     <xs:complexType name="TrainerPokemon">

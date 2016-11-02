@@ -323,6 +323,7 @@ var xmlschema = function (schema) {
     var simpleTypes = {};
     var complexTypes = {};
     var attributeGroups = {};
+    var groups = {};
     var tree = [];
     var any = 0;
     var choice = 0;
@@ -453,6 +454,21 @@ var xmlschema = function (schema) {
                 var seq = elem.getElementsByTagName("sequence")[0];
                 var all = elem.getElementsByTagName("all")[0];
 
+                findbyname(elem, "group").forEach(function (group) {
+                    readSequence(groups[group.getAttribute("ref")]);
+                });
+
+                findbyname(elem, "attributeGroup").forEach(function (agref) {
+                    readAttributes(attributeGroups[agref.getAttribute("ref")], validation);
+                });
+
+                var cc = elem.getElementsByTagName("complexContent")[0];
+                if (cc) {
+                    var base = cc.getElementsByTagName("extension")[0].getAttribute("base");
+                    var extend = complexTypes[base] || groups[base];
+                    readSequence(extend);
+                }
+
                 if (seq) {
                     validation.sequence = true;
                     constructTree(seq, validation.children, validation.sequence);
@@ -461,27 +477,11 @@ var xmlschema = function (schema) {
                     validation.sequence = false;
                     constructTree(all, validation.children, validation.sequence);
                 }
-            }
 
-            var groups = findbyname(validation.xml, "group");
-
-            groups.forEach(function (group) {
-                readSequence(complexTypes[group.getAttribute("ref")]);
-            });
-            
-            findbyname(validation.xml, "attributeGroup").forEach(function (agref) {
-                readAttributes(attributeGroups[agref.getAttribute("ref")], validation);
-            });
-
-            var cc = validation.xml.getElementsByTagName("complexContent")[0];
-            if (cc) {
-                var extend = complexTypes[cc.getElementsByTagName("extension")[0].getAttribute("base")];
-                readSequence(extend);
-                readAttributes(extend, validation);
+                readAttributes(elem, validation);
             }
 
             readSequence(validation.xml);
-            readAttributes(validation.xml, validation);
 
         } else {
             validation = new XsPrimitive(child, sequence);
@@ -526,7 +526,7 @@ var xmlschema = function (schema) {
                 } else if (child.nodeType === Node.ELEMENT_NODE && child.tagName === "xs:complexType") {
                     complexTypes[child.getAttribute("name")] = child;
                 } else if (child.nodeType === Node.ELEMENT_NODE && child.tagName === "xs:group") {
-                    complexTypes[child.getAttribute("name")] = child;
+                    groups[child.getAttribute("name")] = child;
                 } else if (child.nodeType === Node.ELEMENT_NODE && child.tagName === "xs:attributeGroup") {
                     attributeGroups[child.getAttribute("name")] = child;
                 }
@@ -543,10 +543,6 @@ var xmlschema = function (schema) {
         if (callback) {
             deferred.then(callback);
         }
-
-        schemaLoad.then(function () {
-            console.log(tree);
-        });
 
         var output = {
             errors: [],
