@@ -1,6 +1,7 @@
 <trainer xmlns="https://paulwardrip.github.io/xmlschema.js/demo/pokemon"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="https://paulwardrip.github.io/xmlschema.js/demo/pokemon pokemon.xsd">
+         xsi:schemaLocation="https://paulwardrip.github.io/xmlschema.js/demo/pokemon
+            https://paulwardrip.github.io/xmlschema.js/demo/pokemon.xsd">
 
     <pokeball inventory="2" />
     <potion inventory="1" />

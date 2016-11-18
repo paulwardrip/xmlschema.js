@@ -142,6 +142,7 @@ var xmlschema = function (schema) {
 
                 var groups = findbyname(elem, "group");
                 groups.forEach(function (group) {
+                    console.log (group.getAttribute("ref"), groups[group.getAttribute("ref")]);
                     readSequence(groups[group.getAttribute("ref")]);
                 });
 
@@ -201,27 +202,35 @@ var xmlschema = function (schema) {
         });
     }
 
-    var schemaLoad = xmlparser.parse(schema).then(function (result) {
-        xsd = result;
+    function parseSchema(toparse) {
+        var promise = xmlparser.parse(toparse).then(function (result) {
+            xsd = result;
 
-        if (xsd.doc) {
-            xmlschemdocument = xsd.doc;
+            if (xsd.doc) {
+                xmlschemadocument = xsd.doc;
 
-            xsd.doc.firstChild.childNodes.forEach(function (child) {
-                if (child.nodeType === Node.ELEMENT_NODE && child.tagName === "xs:simpleType") {
-                    simpleTypes[child.getAttribute("name")] = child;
-                } else if (child.nodeType === Node.ELEMENT_NODE && child.tagName === "xs:complexType") {
-                    complexTypes[child.getAttribute("name")] = child;
-                } else if (child.nodeType === Node.ELEMENT_NODE && child.tagName === "xs:group") {
-                    groups[child.getAttribute("name")] = child;
-                } else if (child.nodeType === Node.ELEMENT_NODE && child.tagName === "xs:attributeGroup") {
-                    attributeGroups[child.getAttribute("name")] = child;
-                }
-            });
+                xsd.doc.firstChild.childNodes.forEach(function (child) {
+                    if (child.nodeType === Node.ELEMENT_NODE && child.tagName === "xs:simpleType") {
+                        simpleTypes[child.getAttribute("name")] = child;
+                    } else if (child.nodeType === Node.ELEMENT_NODE && child.tagName === "xs:complexType") {
+                        complexTypes[child.getAttribute("name")] = child;
+                    } else if (child.nodeType === Node.ELEMENT_NODE && child.tagName === "xs:group") {
+                        groups[child.getAttribute("name")] = child;
+                    } else if (child.nodeType === Node.ELEMENT_NODE && child.tagName === "xs:attributeGroup") {
+                        attributeGroups[child.getAttribute("name")] = child;
+                    }
+                });
 
-            constructTree(xsd.doc.firstChild, tree, false);
-        }
-    });
+                constructTree(xsd.doc.firstChild, tree, false);
+            }
+
+        });
+
+        return promise;
+    }
+
+    var schemaLoad;
+    if (schema) schemaLoad = parseSchema(schema);
 
     function validate (document, callback) {
         var deferred = xmlparser.deferred();
@@ -230,10 +239,6 @@ var xmlschema = function (schema) {
         if (callback) {
             deferred.then(callback);
         }
-
-        schemaLoad.then(function () {
-            console.log(tree);
-        });
 
         var output = {
             errors: [],
@@ -529,6 +534,14 @@ var xmlschema = function (schema) {
 
         xmlparser.parse(document).then(function(result) {
             xml = result;
+
+            if (xml.doc && !xsd) {
+                var schemaLocation = xml.doc.firstChild.getAttribute("xsi:schemaLocation").split(/[\r\n\s]+/)[1];
+                if (schemaLocation.indexOf("http") > -1) {
+                    console.log ("Read document xsi:schemaLocation: " + schemaLocation);
+                    schemaLoad = parseSchema(schemaLocation);
+                }
+            }
 
             schemaLoad.then(function() {
                 if (!xsd.doc) {
