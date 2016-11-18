@@ -10,7 +10,6 @@ The following features of the xsd are not implemented:
 * xs:key
 * xs:redefine
 * xs:union
-* xs:unique
 
 # Installing
 You can install using bower:
