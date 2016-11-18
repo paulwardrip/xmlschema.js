@@ -4,18 +4,20 @@ module.exports = function(grunt) {
     grunt.initConfig({
 
         watch: {
-            files: [ "*.js" ],
+            files: [ "source/*.js" ],
             tasks: [ "concat", "uglify" ]
         },
 
         concat: {
             build: {
                 files: [{
-                    'dist/xmlschema-all.js': [ 'xmlparser.js', 'xmljson.js', 'simpletype-validator.js',
-                        'xsdoptions.js', 'xmlschema.js' ],
-                    'dist/xsdoptions.js': [ 'xmlparser.js', 'simpletype-validator.js', 'xsdoptions.js' ],
-                    'dist/xmlschema.js': [ 'xmlparser.js', 'simpletype-validator.js', 'xmlschema.js' ],
-                    'dist/xmljson.js': [ 'xmljson.js' ]
+                    'dist/xmlschema-all.js': [ 'source/xmlparser.js', 'source/xmljson.js',
+                        'source/simpletype-validator.js', 'source/xsdoptions.js', 'source/xmlschema.js' ],
+                    'dist/xsdoptions.js': [ 'source/xmlparser.js', 'source/simpletype-validator.js',
+                        'source/xsdoptions.js' ],
+                    'dist/xmlschema.js': [ 'source/xmlparser.js', 'source/simpletype-validator.js',
+                        'source/xmlschema.js' ],
+                    'dist/xmljson.js': [ 'source/xmljson.js' ]
                 }]
             }
         },

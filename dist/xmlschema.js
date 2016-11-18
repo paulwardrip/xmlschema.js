@@ -5,22 +5,28 @@ var xmlparser = {
 
         function xmlString(str) {
             if (typeof jQuery !== "undefined") {
-                out.doc = $.parseXML(str);
-                out.str = str;
+                try {
+                    out.doc = $.parseXML(str);
+                    out.str = str;
+                } catch (e) {
+                    deferred.reject("XML could not be parsed.");
+                }
+
                 if (out.doc) {
                     deferred.resolve(out);
                 } else {
-                    deferred.reject("XML was not parsed.");
+                    deferred.reject("XML could not be parsed.");
                 }
 
             } else if (typeof DOMParser !== "undefined") {
-                try {
-                    var par = new DOMParser();
-                    out.doc = par.parseFromString(str, "application/xml");
-                    out.str = str;
+                var par = new DOMParser();
+                out.doc = par.parseFromString(str, "application/xml");
+                out.str = str;
+
+                if (out.doc.getElementsByTagName("parsererror").length > 0) {
+                    deferred.reject("XML could not be parsed.");
+                } else {
                     deferred.resolve(out);
-                } catch (e) {
-                    deferred.reject(e);
                 }
             }
         }
@@ -545,6 +551,10 @@ var xmlschema = function (schema) {
 
     function validate (document, callback) {
         var deferred = xmlparser.deferred();
+        var score = {
+            elements: 0,
+            attributes: 0
+        };
         var xml;
 
         if (callback) {
@@ -588,6 +598,7 @@ var xmlschema = function (schema) {
                     var anywatch;
 
                     function nodefound(leaf) {
+                        score.elements ++;
                         countNode(element.tagName);
                         lastleaf = leaf;
 
@@ -605,6 +616,7 @@ var xmlschema = function (schema) {
                                         if (vine instanceof XsAnyAttribute) {
                                             anyattrfound = true;
                                         } else if (attr.name === vine.name) {
+                                            score.attributes ++;
                                             attrfound = true;
                                             attrcount[attr.name] = (attrcount[attr.name] !== undefined) ?
                                             attrcount[attr.name] + 1 : 1;
@@ -874,16 +886,25 @@ var xmlschema = function (schema) {
                         output.valid = output.errors.length === 0;
                         output.xml = xml;
                         output.xsd = xsd;
+                        output.message = "Validated " + score.elements + " elements and " + score.attributes +
+                            " attributes, document is " + (output.valid ? "valid" : "invalid") + ".";
                     }
 
                     deferred.resolve(output);
 
+                }).catch(function (message) {
+                    console.log(message);
+                    deferred.reject(message);
                 });
             } else {
-                error ("No schema document loaded.");
+                deferred.reject("No schema document loaded.");
             }
 
             return output;
+
+        }).catch(function (message) {
+            console.log(message);
+            deferred.reject(message);
         });
 
         return deferred.promise();

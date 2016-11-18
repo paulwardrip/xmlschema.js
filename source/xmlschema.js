@@ -230,6 +230,10 @@ var xmlschema = function (schema) {
 
     function validate (document, callback) {
         var deferred = xmlparser.deferred();
+        var score = {
+            elements: 0,
+            attributes: 0
+        };
         var xml;
 
         if (callback) {
@@ -273,6 +277,7 @@ var xmlschema = function (schema) {
                     var anywatch;
 
                     function nodefound(leaf) {
+                        score.elements ++;
                         countNode(element.tagName);
                         lastleaf = leaf;
 
@@ -290,6 +295,7 @@ var xmlschema = function (schema) {
                                         if (vine instanceof XsAnyAttribute) {
                                             anyattrfound = true;
                                         } else if (attr.name === vine.name) {
+                                            score.attributes ++;
                                             attrfound = true;
                                             attrcount[attr.name] = (attrcount[attr.name] !== undefined) ?
                                             attrcount[attr.name] + 1 : 1;
@@ -559,16 +565,25 @@ var xmlschema = function (schema) {
                         output.valid = output.errors.length === 0;
                         output.xml = xml;
                         output.xsd = xsd;
+                        output.message = "Validated " + score.elements + " elements and " + score.attributes +
+                            " attributes, document is " + (output.valid ? "valid" : "invalid") + ".";
                     }
 
                     deferred.resolve(output);
 
+                }).catch(function (message) {
+                    console.log(message);
+                    deferred.reject(message);
                 });
             } else {
-                error ("No schema document loaded.");
+                deferred.reject("No schema document loaded.");
             }
 
             return output;
+
+        }).catch(function (message) {
+            console.log(message);
+            deferred.reject(message);
         });
 
         return deferred.promise();

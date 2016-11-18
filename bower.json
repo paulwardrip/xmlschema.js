@@ -15,9 +15,10 @@
   "license": "MIT",
   "ignore": [
     "demo",
+    "source",
     "index.html",
-    "*.js",
     "node_modules",
-    "bower_components"
+    "bower_components",
+    "Gruntfile.js"
   ]
 }

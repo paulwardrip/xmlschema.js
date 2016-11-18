@@ -21,7 +21,7 @@
    function validate(xsd, xml, callback) {
       xmlschema().validate(xml).then(function(result) {
          if (result.valid) {
-            $("#log").text("The document is valid.");
+            $("#log").text(result.message);
          } else {
             var output = "";
             result.errors.forEach(function (error) {
@@ -35,6 +35,8 @@
          if (callback) {
             callback(result);
          }
+      }).catch(function (message) {
+         $("#log").text(message);
       });
    }
 

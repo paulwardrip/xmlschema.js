@@ -5,22 +5,28 @@ var xmlparser = {
 
         function xmlString(str) {
             if (typeof jQuery !== "undefined") {
-                out.doc = $.parseXML(str);
-                out.str = str;
+                try {
+                    out.doc = $.parseXML(str);
+                    out.str = str;
+                } catch (e) {
+                    deferred.reject("XML could not be parsed.");
+                }
+
                 if (out.doc) {
                     deferred.resolve(out);
                 } else {
-                    deferred.reject("XML was not parsed.");
+                    deferred.reject("XML could not be parsed.");
                 }
 
             } else if (typeof DOMParser !== "undefined") {
-                try {
-                    var par = new DOMParser();
-                    out.doc = par.parseFromString(str, "application/xml");
-                    out.str = str;
+                var par = new DOMParser();
+                out.doc = par.parseFromString(str, "application/xml");
+                out.str = str;
+
+                if (out.doc.getElementsByTagName("parsererror").length > 0) {
+                    deferred.reject("XML could not be parsed.");
+                } else {
                     deferred.resolve(out);
-                } catch (e) {
-                    deferred.reject(e);
                 }
             }
         }
