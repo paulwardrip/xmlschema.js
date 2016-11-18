@@ -333,6 +333,7 @@ var xmlschema = function (schema) {
     var tree = [];
     var any = 0;
     var choice = 0;
+    var unique = [];
 
     function XsChoice (child, sequence) {
         var opts = [];
@@ -446,6 +447,15 @@ var xmlschema = function (schema) {
         var validation;
         var inlineSimple = child.getElementsByTagName("simpleType");
         var inlineComplex = child.getElementsByTagName("complexType");
+
+        Array.prototype.slice.call(child.getElementsByTagName("unique")).forEach(function (uni) {
+            var uk = {
+                name: uni.getAttribute("name"),
+                selector: uni.getElementsByTagName("selector")[0].getAttribute("xpath"),
+                field: uni.getElementsByTagName("field")[0].getAttribute("xpath")
+            };
+            unique.push(uk);
+        });
 
         if (child.getAttribute("type") && simpleTypes[child.getAttribute("type")]) {
             validation = new XsSimpleType(child, sequence);
@@ -571,6 +581,48 @@ var xmlschema = function (schema) {
         function error(message) {
             output.errors.push(message);
             console.log(message);
+        }
+
+        function validateUnique() {
+            var xpath = new XPathEvaluator();
+            var resolver = xpath.createNSResolver(xml.doc.documentElement);
+
+            function xmlns(all, p1, p2) {
+                return (p1 + "defaultns:" + p2);
+            }
+
+            function defaultns(pfx) {
+                if (pfx === "defaultns") {
+                    return xml.doc.documentElement.getAttribute("xmlns");
+                } else {
+                    resolver(pfx);
+                }
+            }
+
+            unique.forEach(function (constr) {
+                var select = constr.selector.replace(/^()([\w\-_:]+)/, xmlns).replace(/(\/{1,2})([\w\-_:]+)/, xmlns);
+                var objs = xpath.evaluate(select, xml.doc.documentElement, defaultns,
+                    XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null);
+                var values = {};
+
+                for (var i = 0; i < objs.snapshotLength; i++) {
+                    var elem = objs.snapshotItem(i);
+                    var fselect = constr.field.replace(/^()([\w\-_:]+)/, xmlns).replace(/(\/{1,2})([\w\-_:]+)/, xmlns);
+
+                    var fobjs = xpath.evaluate(fselect, elem, defaultns, XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null);
+                    if (fobjs.snapshotLength > 0) {
+                        var felem = fobjs.snapshotItem(0);
+                        if (!values[felem.nodeValue]){
+                            values[felem.nodeValue] = true;
+                        } else {
+                            error("Unique constraint " + constr.name + " violated on <" + elem.tagName + ">");
+                        }
+                    } else {
+                        warn("Could not evaluate unique constraint " + constr.name + " on <" + elem.tagName +
+                            "> field not found, xpath: " + constr.field);
+                    }
+                }
+            });
         }
 
         function validateElement(nodes, branch, sequence) {
@@ -883,6 +935,7 @@ var xmlschema = function (schema) {
 
                     } else {
                         validateElement(xml.doc.childNodes, tree, true);
+                        validateUnique();
                         output.valid = output.errors.length === 0;
                         output.xml = xml;
                         output.xsd = xsd;

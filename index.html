@@ -19,7 +19,7 @@
    </div>
 <script type="text/javascript">
    function validate(xsd, xml, callback) {
-      xmlschema().validate(xml).then(function(result) {
+      xmlschema(xsd).validate(xml).then(function(result) {
          if (result.valid) {
             $("#log").text(result.message);
          } else {
