@@ -136,13 +136,11 @@ var xmlschema = function (schema) {
             validation = new XsComplexType(child, sequence, inlineComplex[0]);
 
             function readSequence(elem) {
-                console.log(elem);
                 var seq = elem.getElementsByTagName("sequence")[0];
                 var all = elem.getElementsByTagName("all")[0];
 
-                var groups = findbyname(elem, "group");
-                groups.forEach(function (group) {
-                    console.log (group.getAttribute("ref"), groups[group.getAttribute("ref")]);
+                var gs = findbyname(elem, "group");
+                gs.forEach(function (group) {
                     readSequence(groups[group.getAttribute("ref")]);
                 });
 
@@ -153,7 +151,7 @@ var xmlschema = function (schema) {
                 var cc = elem.getElementsByTagName("complexContent")[0];
                 if (cc) {
                     var base = cc.getElementsByTagName("extension")[0].getAttribute("base");
-                    var extend = complexTypes[base] || groups[base];
+                    var extend = complexTypes[base] || gs[base];
                     readSequence(extend);
                 }
 
@@ -203,7 +201,7 @@ var xmlschema = function (schema) {
     }
 
     function parseSchema(toparse) {
-        var promise = xmlparser.parse(toparse).then(function (result) {
+        return xmlparser.parse(toparse).then(function (result) {
             xsd = result;
 
             if (xsd.doc) {
@@ -225,8 +223,6 @@ var xmlschema = function (schema) {
             }
 
         });
-
-        return promise;
     }
 
     var schemaLoad;
@@ -536,32 +532,41 @@ var xmlschema = function (schema) {
             xml = result;
 
             if (xml.doc && !xsd) {
-                var schemaLocation = xml.doc.firstChild.getAttribute("xsi:schemaLocation").split(/[\r\n\s]+/)[1];
-                if (schemaLocation.indexOf("http") > -1) {
-                    console.log ("Read document xsi:schemaLocation: " + schemaLocation);
+                var schemaLocation;
+                if (xml.doc.firstChild.getAttribute("xsi:schemaLocation"))
+                    schemaLocation = xml.doc.firstChild.getAttribute("xsi:schemaLocation").split(/[\r\n\s]+/)[1];
+                else if (xml.doc.firstChild.getAttribute("xsi:noNamespaceSchemaLocation"))
+                    schemaLocation = xml.doc.firstChild.getAttribute("xsi:noNamespaceSchemaLocation");
+
+                if (schemaLocation && schemaLocation.indexOf("http") > -1) {
+                    console.log ("Loading schema from document: " + schemaLocation);
                     schemaLoad = parseSchema(schemaLocation);
                 }
             }
 
-            schemaLoad.then(function() {
-                if (!xsd.doc) {
-                    error("XSD could not be parsed.");
-                    error(xsd.error);
+            if (schemaLoad) {
+                schemaLoad.then(function () {
+                    if (!xsd.doc) {
+                        error("XSD could not be parsed.");
+                        error(xsd.error);
 
-                } else if (!xml.doc) {
-                    error("XML could not be parsed.");
-                    error(xml.error);
+                    } else if (!xml.doc) {
+                        error("XML could not be parsed.");
+                        error(xml.error);
 
-                } else {
-                    validateElement(xml.doc.childNodes, tree, true);
-                    output.valid = output.errors.length === 0;
-                    output.xml = xml;
-                    output.xsd = xsd;
-                }
+                    } else {
+                        validateElement(xml.doc.childNodes, tree, true);
+                        output.valid = output.errors.length === 0;
+                        output.xml = xml;
+                        output.xsd = xsd;
+                    }
 
-                deferred.resolve(output);
+                    deferred.resolve(output);
 
-            });
+                });
+            } else {
+                error ("No schema document loaded.");
+            }
 
             return output;
         });
