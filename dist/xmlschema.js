@@ -3,11 +3,15 @@ var xmlparser = {
         var out = {doc: null, str: null};
         var deferred = xmlparser.deferred();
 
-        function xmlString(str) {
+        function xmlString(str, uri) {
             if (typeof jQuery !== "undefined") {
                 try {
                     out.doc = $.parseXML(str);
                     out.str = str;
+                    out.parser = "jQuery";
+                    if (uri) {
+                        out.uri = uri;
+                    }
                 } catch (e) {
                     deferred.reject("XML could not be parsed.");
                 }
@@ -22,6 +26,10 @@ var xmlparser = {
                 var par = new DOMParser();
                 out.doc = par.parseFromString(str, "application/xml");
                 out.str = str;
+                out.parser = "DOMParser";
+                if (uri) {
+                    out.uri = uri;
+                }
 
                 if (out.doc.getElementsByTagName("parsererror").length > 0) {
                     deferred.reject("XML could not be parsed.");
@@ -59,7 +67,7 @@ var xmlparser = {
 
                 if (typeof jQuery !== "undefined") {
                     var p = $.get(input, {}, function (xml) {
-                        xmlString(xml);
+                        xmlString(xml, input);
                     }, "text");
                     p.catch(function () {
                        deferred.reject("Could not read file: " + input);
@@ -88,7 +96,7 @@ var xmlparser = {
                         xhr.onreadystatechange = function () {
                             if (this.readyState === 4) {
                                 if (this.status === 200) {
-                                    xmlString(this.responseText);
+                                    xmlString(this.responseText, input);
                                 } else {
                                     out.error = "Unable to request document, response code: " + this.status;
                                     deferred.reject(out);
@@ -243,11 +251,12 @@ function XsSimpleTypeValidator(simpleType, tagname) {
     }
 
     var enumeration = [];
-    this.enumeration = enumeration;
 
     Array.prototype.slice.call(this.xml.getElementsByTagName("enumeration")).forEach(function (enumnode) {
         enumeration.push(enumnode.getAttribute("value"));
     });
+
+    this.enumeration = enumeration;
 
     this.validate = function(value) {
         var output = {
@@ -261,8 +270,8 @@ function XsSimpleTypeValidator(simpleType, tagname) {
 
         if (this.enumeration.length > 0) {
             var isval = false;
-            this.enumeration.forEach(function (value) {
-                if (value === value) {
+            this.enumeration.forEach(function (evalue) {
+                if (value === evalue) {
                     isval = true;
                     return true;
                 }
@@ -531,15 +540,44 @@ var xmlschema = function (schema) {
         });
     }
 
-    function parseSchema(toparse) {
-        return xmlparser.parse(toparse).then(function (result) {
-            xsd = result;
+    function parseSchema(toparse, tree) {
+        var def = xmlparser.deferred();
+        var sub = [ false ];
 
-            if (xsd.doc) {
-                xmlschemadocument = xsd.doc;
+        xmlparser.parse(toparse).then(function (result) {
+            function url (input, parentDocument) {
+                if (/^http/.test(input)) {
+                    return input;
+                } else {
+                    return parentDocument.substring(0, parentDocument.lastIndexOf("/") + 1) + input;
+                }
+            }
 
-                xsd.doc.firstChild.childNodes.forEach(function (child) {
-                    if (child.nodeType === Node.ELEMENT_NODE && child.tagName === "xs:simpleType") {
+            function resolver() {
+                var go = true;
+                for (var idx in sub) {
+                    if (!sub[idx]) {
+                        go = false;
+                        break;
+                    }
+                }
+                if (go) {
+                    if (tree) constructTree(result.doc.firstChild, tree, false);
+                    def.resolve(result);
+                }
+            }
+
+            if (result.doc) {
+                result.doc.firstChild.childNodes.forEach(function (child) {
+                    if (child.nodeType === Node.ELEMENT_NODE && child.tagName === "xs:include") {
+                        var midx = sub.length;
+                        sub.push(false);
+                        var pr = parseSchema(url(child.getAttribute("schemaLocation"), result.uri), false);
+                        pr.then(function () {
+                            sub[midx] = true;
+                            resolver();
+                        })
+                    } else if (child.nodeType === Node.ELEMENT_NODE && child.tagName === "xs:simpleType") {
                         simpleTypes[child.getAttribute("name")] = child;
                     } else if (child.nodeType === Node.ELEMENT_NODE && child.tagName === "xs:complexType") {
                         complexTypes[child.getAttribute("name")] = child;
@@ -550,14 +588,26 @@ var xmlschema = function (schema) {
                     }
                 });
 
-                constructTree(xsd.doc.firstChild, tree, false);
+                sub[0] = true;
+                resolver();
             }
+        });
 
+        return def.promise();
+    }
+
+    function mainSchema() {
+        schemaLoad.then(function (result) {
+            xsd = result;
+            xmlschemadocument = xsd.doc;
         });
     }
 
     var schemaLoad;
-    if (schema) schemaLoad = parseSchema(schema);
+    if (schema) {
+        schemaLoad = parseSchema(schema, true);
+        mainSchema();
+    }
 
     function validate (document, callback) {
         var deferred = xmlparser.deferred();
@@ -910,7 +960,7 @@ var xmlschema = function (schema) {
         xmlparser.parse(document).then(function(result) {
             xml = result;
 
-            if (xml.doc && !xsd) {
+            if (xml.doc && !schemaLoad) {
                 var schemaLocation;
                 if (xml.doc.firstChild.getAttribute("xsi:schemaLocation"))
                     schemaLocation = xml.doc.firstChild.getAttribute("xsi:schemaLocation").split(/[\r\n\s]+/)[1];
@@ -919,7 +969,8 @@ var xmlschema = function (schema) {
 
                 if (schemaLocation && schemaLocation.indexOf("http") > -1) {
                     console.log ("Loading schema from document: " + schemaLocation);
-                    schemaLoad = parseSchema(schemaLocation);
+                    schemaLoad = parseSchema(schemaLocation, true);
+                    mainSchema();
                 }
             }
 

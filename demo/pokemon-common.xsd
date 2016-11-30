@@ -1,0 +1,41 @@
+<?xml version="1.0"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           targetNamespace="https://paulwardrip.github.io/xmlschema.js/demo/pokemon">
+    <xs:simpleType name="PokemonType">
+        <xs:annotation>
+            <xs:documentation>The type of a move or a pokemon.</xs:documentation>
+        </xs:annotation>
+
+        <xs:restriction>
+            <xs:enumeration value="normal" />
+            <xs:enumeration value="fighting"/>
+            <xs:enumeration value="flying"/>
+            <xs:enumeration value="poison"/>
+            <xs:enumeration value="ground"/>
+            <xs:enumeration value="rock"/>
+            <xs:enumeration value="bug"/>
+            <xs:enumeration value="ghost"/>
+            <xs:enumeration value="steel"/>
+            <xs:enumeration value="fire"/>
+            <xs:enumeration value="fire"/>
+            <xs:enumeration value="water"/>
+            <xs:enumeration value="grass"/>
+            <xs:enumeration value="electric"/>
+            <xs:enumeration value="psychic"/>
+            <xs:enumeration value="ice"/>
+            <xs:enumeration value="dragon"/>
+            <xs:enumeration value="dark"/>
+            <xs:enumeration value="fairy"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <xs:simpleType name="RegionType">
+        <xs:enumeration value="Kanto"/>
+        <xs:enumeration value="Johto"/>
+        <xs:enumeration value="Hoenn"/>
+        <xs:enumeration value="Sinnoh"/>
+        <xs:enumeration value="Unova"/>
+        <xs:enumeration value="Kalos"/>
+        <xs:enumeration value="Alola"/>
+    </xs:simpleType>
+</xs:schema>

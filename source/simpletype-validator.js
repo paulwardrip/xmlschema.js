@@ -62,11 +62,12 @@ function XsSimpleTypeValidator(simpleType, tagname) {
     }
 
     var enumeration = [];
-    this.enumeration = enumeration;
 
     Array.prototype.slice.call(this.xml.getElementsByTagName("enumeration")).forEach(function (enumnode) {
         enumeration.push(enumnode.getAttribute("value"));
     });
+
+    this.enumeration = enumeration;
 
     this.validate = function(value) {
         var output = {
@@ -80,8 +81,8 @@ function XsSimpleTypeValidator(simpleType, tagname) {
 
         if (this.enumeration.length > 0) {
             var isval = false;
-            this.enumeration.forEach(function (value) {
-                if (value === value) {
+            this.enumeration.forEach(function (evalue) {
+                if (value === evalue) {
                     isval = true;
                     return true;
                 }

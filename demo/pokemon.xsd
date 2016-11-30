@@ -2,6 +2,8 @@
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
     targetNamespace="https://paulwardrip.github.io/xmlschema.js/demo/pokemon">
 
+    <xs:include schemaLocation="pokemon-common.xsd"/>
+
     <xs:element name="trainer" type="Trainer">
         <xs:unique name="PokemonID">
             <xs:selector xpath="//pokemon" />
@@ -26,6 +28,7 @@
                 <xs:element name="revive" type="ItemType" />
                 <xs:element name="pokeball" type="ItemType" />
             </xs:choice>
+            <xs:element name="region" type="RegionType"/>
             <xs:element name="team">
                 <xs:complexType>
                     <xs:sequence>
@@ -65,34 +68,6 @@
         </xs:annotation>
         <xs:restriction base="xs:string">
             <xs:pattern value="^[a-zA-Z\-]*$"/>
-        </xs:restriction>
-    </xs:simpleType>
-
-    <xs:simpleType name="PokemonType">
-        <xs:annotation>
-            <xs:documentation>The type of a move or a pokemon.</xs:documentation>
-        </xs:annotation>
-
-        <xs:restriction>
-            <xs:enumeration value="normal" />
-            <xs:enumeration value="fighting"/>
-            <xs:enumeration value="flying"/>
-            <xs:enumeration value="poison"/>
-            <xs:enumeration value="ground"/>
-            <xs:enumeration value="rock"/>
-            <xs:enumeration value="bug"/>
-            <xs:enumeration value="ghost"/>
-            <xs:enumeration value="steel"/>
-            <xs:enumeration value="fire"/>
-            <xs:enumeration value="fire"/>
-            <xs:enumeration value="water"/>
-            <xs:enumeration value="grass"/>
-            <xs:enumeration value="electric"/>
-            <xs:enumeration value="psychic"/>
-            <xs:enumeration value="ice"/>
-            <xs:enumeration value="dragon"/>
-            <xs:enumeration value="dark"/>
-            <xs:enumeration value="fairy"/>
         </xs:restriction>
     </xs:simpleType>
 </xs:schema>

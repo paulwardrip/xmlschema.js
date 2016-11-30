@@ -210,15 +210,44 @@ var xmlschema = function (schema) {
         });
     }
 
-    function parseSchema(toparse) {
-        return xmlparser.parse(toparse).then(function (result) {
-            xsd = result;
+    function parseSchema(toparse, tree) {
+        var def = xmlparser.deferred();
+        var sub = [ false ];
 
-            if (xsd.doc) {
-                xmlschemadocument = xsd.doc;
+        xmlparser.parse(toparse).then(function (result) {
+            function url (input, parentDocument) {
+                if (/^http/.test(input)) {
+                    return input;
+                } else {
+                    return parentDocument.substring(0, parentDocument.lastIndexOf("/") + 1) + input;
+                }
+            }
 
-                xsd.doc.firstChild.childNodes.forEach(function (child) {
-                    if (child.nodeType === Node.ELEMENT_NODE && child.tagName === "xs:simpleType") {
+            function resolver() {
+                var go = true;
+                for (var idx in sub) {
+                    if (!sub[idx]) {
+                        go = false;
+                        break;
+                    }
+                }
+                if (go) {
+                    if (tree) constructTree(result.doc.firstChild, tree, false);
+                    def.resolve(result);
+                }
+            }
+
+            if (result.doc) {
+                result.doc.firstChild.childNodes.forEach(function (child) {
+                    if (child.nodeType === Node.ELEMENT_NODE && child.tagName === "xs:include") {
+                        var midx = sub.length;
+                        sub.push(false);
+                        var pr = parseSchema(url(child.getAttribute("schemaLocation"), result.uri), false);
+                        pr.then(function () {
+                            sub[midx] = true;
+                            resolver();
+                        })
+                    } else if (child.nodeType === Node.ELEMENT_NODE && child.tagName === "xs:simpleType") {
                         simpleTypes[child.getAttribute("name")] = child;
                     } else if (child.nodeType === Node.ELEMENT_NODE && child.tagName === "xs:complexType") {
                         complexTypes[child.getAttribute("name")] = child;
@@ -229,14 +258,26 @@ var xmlschema = function (schema) {
                     }
                 });
 
-                constructTree(xsd.doc.firstChild, tree, false);
+                sub[0] = true;
+                resolver();
             }
+        });
 
+        return def.promise();
+    }
+
+    function mainSchema() {
+        schemaLoad.then(function (result) {
+            xsd = result;
+            xmlschemadocument = xsd.doc;
         });
     }
 
     var schemaLoad;
-    if (schema) schemaLoad = parseSchema(schema);
+    if (schema) {
+        schemaLoad = parseSchema(schema, true);
+        mainSchema();
+    }
 
     function validate (document, callback) {
         var deferred = xmlparser.deferred();
@@ -589,7 +630,7 @@ var xmlschema = function (schema) {
         xmlparser.parse(document).then(function(result) {
             xml = result;
 
-            if (xml.doc && !xsd) {
+            if (xml.doc && !schemaLoad) {
                 var schemaLocation;
                 if (xml.doc.firstChild.getAttribute("xsi:schemaLocation"))
                     schemaLocation = xml.doc.firstChild.getAttribute("xsi:schemaLocation").split(/[\r\n\s]+/)[1];
@@ -598,7 +639,8 @@ var xmlschema = function (schema) {
 
                 if (schemaLocation && schemaLocation.indexOf("http") > -1) {
                     console.log ("Loading schema from document: " + schemaLocation);
-                    schemaLoad = parseSchema(schemaLocation);
+                    schemaLoad = parseSchema(schemaLocation, true);
+                    mainSchema();
                 }
             }
 

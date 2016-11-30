@@ -6,7 +6,6 @@ If you would like to report a bug or even contribute to the project, contact me:
 The following features of the xsd are not implemented:
 
 * xs:import
-* xs:include
 * xs:key
 * xs:redefine
 * xs:union

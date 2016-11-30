@@ -3,11 +3,15 @@ var xmlparser = {
         var out = {doc: null, str: null};
         var deferred = xmlparser.deferred();
 
-        function xmlString(str) {
+        function xmlString(str, uri) {
             if (typeof jQuery !== "undefined") {
                 try {
                     out.doc = $.parseXML(str);
                     out.str = str;
+                    out.parser = "jQuery";
+                    if (uri) {
+                        out.uri = uri;
+                    }
                 } catch (e) {
                     deferred.reject("XML could not be parsed.");
                 }
@@ -22,6 +26,10 @@ var xmlparser = {
                 var par = new DOMParser();
                 out.doc = par.parseFromString(str, "application/xml");
                 out.str = str;
+                out.parser = "DOMParser";
+                if (uri) {
+                    out.uri = uri;
+                }
 
                 if (out.doc.getElementsByTagName("parsererror").length > 0) {
                     deferred.reject("XML could not be parsed.");
@@ -59,7 +67,7 @@ var xmlparser = {
 
                 if (typeof jQuery !== "undefined") {
                     var p = $.get(input, {}, function (xml) {
-                        xmlString(xml);
+                        xmlString(xml, input);
                     }, "text");
                     p.catch(function () {
                        deferred.reject("Could not read file: " + input);
@@ -88,7 +96,7 @@ var xmlparser = {
                         xhr.onreadystatechange = function () {
                             if (this.readyState === 4) {
                                 if (this.status === 200) {
-                                    xmlString(this.responseText);
+                                    xmlString(this.responseText, input);
                                 } else {
                                     out.error = "Unable to request document, response code: " + this.status;
                                     deferred.reject(out);
