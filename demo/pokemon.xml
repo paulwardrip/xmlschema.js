@@ -12,7 +12,7 @@
         <pokemon id="1" level="4" hp="100" hpmax="100">
             <name>Bulbasaur</name>
             <type>poison</type>
-            <type>gras</type>
+            <type>grass</type>
         </pokemon>
 
         <!-- invalid pokemon -->
@@ -20,7 +20,7 @@
             <name>Bulbasaur1</name>
             <type>poison</type>
             <type>grass</type>
-            <type>water</type>
+            <type>watur</type>
         </pokemon>
     </team>
 </trainer>

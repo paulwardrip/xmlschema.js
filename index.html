@@ -18,8 +18,10 @@
       <textarea style="width: 100%; height: 300px" id="log"></textarea>
    </div>
 <script type="text/javascript">
-   function validate(xsd, xml, callback) {
-      xmlschema(xsd).validate(xml).then(function(result) {
+   var xsdjs = xmlschema('demo/pokemon.xsd');
+
+   function validate(xml, callback) {
+      xsdjs.validate(xml).then(function(result) {
          if (result.valid) {
             $("#log").text(result.message);
          } else {
@@ -42,10 +44,10 @@
 
    $("#validate").click(function () {
       $("#log").text("");
-      validate($("#xsd").val(), $("#xml").val());
+      validate($("#xml").val());
    });
 
-   validate('demo/pokemon.xsd', 'demo/pokemon.xml', function (result) {
+   validate('demo/pokemon.xml', function (result) {
       $("#xml").text(result.xml.str);
       $("#xsd").text(result.xsd.str);
    })
