@@ -12,10 +12,8 @@ The following features of the xsd are not implemented:
 
 # Installing
 You can install using bower:
-`bower install xmlschema.js`
 
-...or npm:
-`npm install xmlschema.js`
+`bower install xmlschema.js`
 
 # Usage
 
