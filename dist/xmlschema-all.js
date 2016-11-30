@@ -864,7 +864,7 @@ var xmlschema = function (schema) {
         });
     }
 
-    function parseSchema(toparse, tree) {
+    function parseSchema(toparse, contree) {
         var def = xmlparser.deferred();
         var sub = [ false ];
 
@@ -886,7 +886,7 @@ var xmlschema = function (schema) {
                     }
                 }
                 if (go) {
-                    if (tree) constructTree(result.doc.firstChild, tree, false);
+                    if (contree) constructTree(result.doc.firstChild, tree, false);
                     def.resolve(result);
                 }
             }
