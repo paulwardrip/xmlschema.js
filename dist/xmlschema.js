@@ -545,11 +545,19 @@ var xmlschema = function (schema) {
         var sub = [ false ];
 
         xmlparser.parse(toparse).then(function (result) {
-            function url (input, parentDocument) {
+            function url (input, parentDocument, cb) {
                 if (/^http/.test(input)) {
-                    return input;
+                    cb (input);
+                } else if (parentDocument) {
+                    cb (parentDocument.substring(0, parentDocument.lastIndexOf("/") + 1) + input);
+                } else if (xmlLoad) {
+                    xmlLoad.then(function () {
+                        console.log (xml);
+                        var sl = xml.doc.firstChild.getAttribute("xsi:schemaLocation").split(/[\r\n\s]+/)[1];
+                        cb (sl.substring(0, sl.lastIndexOf("/") + 1) + input);
+                    })
                 } else {
-                    return parentDocument.substring(0, parentDocument.lastIndexOf("/") + 1) + input;
+                    cb();
                 }
             }
 
@@ -572,11 +580,20 @@ var xmlschema = function (schema) {
                     if (child.nodeType === Node.ELEMENT_NODE && child.tagName === "xs:include") {
                         var midx = sub.length;
                         sub.push(false);
-                        var pr = parseSchema(url(child.getAttribute("schemaLocation"), result.uri), false);
-                        pr.then(function () {
-                            sub[midx] = true;
-                            resolver();
-                        })
+                        url(child.getAttribute("schemaLocation"), result.uri, function(uri){
+                            if (uri) {
+                                var pr = parseSchema(uri, false);
+                                pr.then(function () {
+                                    sub[midx] = true;
+                                    resolver();
+                                }).catch(function () {
+                                    def.reject("Could not load include: " + child.getAttribute("schemaLocation"));
+                                });
+                            } else {
+                                def.reject("Could not load include: " + child.getAttribute("schemaLocation"));
+                            }
+                        });
+
                     } else if (child.nodeType === Node.ELEMENT_NODE && child.tagName === "xs:simpleType") {
                         simpleTypes[child.getAttribute("name")] = child;
                     } else if (child.nodeType === Node.ELEMENT_NODE && child.tagName === "xs:complexType") {
@@ -591,6 +608,8 @@ var xmlschema = function (schema) {
                 sub[0] = true;
                 resolver();
             }
+        }).catch(function () {
+            def.reject();
         });
 
         return def.promise();
@@ -609,13 +628,15 @@ var xmlschema = function (schema) {
         mainSchema();
     }
 
+    var xmlLoad;
+    var xml;
+
     function validate (document, callback) {
         var deferred = xmlparser.deferred();
         var score = {
             elements: 0,
             attributes: 0
         };
-        var xml;
 
         if (callback) {
             deferred.then(callback);
@@ -957,7 +978,7 @@ var xmlschema = function (schema) {
 
         }
 
-        xmlparser.parse(document).then(function(result) {
+        xmlLoad = xmlparser.parse(document).then(function(result) {
             xml = result;
 
             if (xml.doc && !schemaLoad) {
