@@ -659,22 +659,43 @@ var xmlschema = function (schema) {
     }
 
     var xsd;
+    /*
     var simpleTypes = {};
     var complexTypes = {};
     var attributeGroups = {};
     var groups = {};
     var nsprefix = {};
+     */
     var tree = [];
     var any = 0;
     var choice = 0;
     var unique = [];
+    var namespaces = [];
+
+    var xsi = "/^xsi?:/";
+
+    function NS(ns) {
+        if (ns) {
+            this.url = ns;
+            this.default = false;
+        } else {
+            this.url = null;
+            this.default = true;
+        }
+
+        this.simpleTypes = {};
+        this.complexTypes = {};
+        this.attributeGroups = {};
+        this.groups = {};
+        this.unique = [];
+    }
 
     function XsChoice (child, sequence, ns) {
         var opts = [];
 
         child.childNodes.forEach(function (choice) {
             if (choice.nodeType === Node.ELEMENT_NODE && choice.tagName === "xs:element") {
-                opts.push(readElement(choice, sequence));
+                opts.push(readElement(ns, choice, sequence));
 
             } else if (choice.nodeType === Node.ELEMENT_NODE && choice.tagName === "xs:any") {
                 opts.push(new XsAny(choice));
@@ -687,7 +708,7 @@ var xmlschema = function (schema) {
         this.choices = opts;
         this.number = choice++;
         this.from = "xs:choice";
-        this.ns = ns;
+        this.ns = ns.url;
     }
 
     function XsSimpleType(child, type, sequence, ns) {
@@ -699,7 +720,7 @@ var xmlschema = function (schema) {
             else return (sequence) ? "unbounded" : 1; }();
 
         if (type) {
-            this.xml = simpleTypes[type].elem;
+            this.xml = ns.simpleTypes[type].elem;
         } else {
             this.xml = child.getElementsByTagName("simpleType")[0];
         }
@@ -707,7 +728,7 @@ var xmlschema = function (schema) {
         this.validator = new XsSimpleTypeValidator(this.xml, "<" + child.getAttribute("name") + ">");
 
         this.from = "xs:simpleType";
-        this.ns = ns;
+        this.ns = ns.url;
     }
 
     function XsAny(child) {
@@ -732,10 +753,10 @@ var xmlschema = function (schema) {
         this.maxOccurs = function(){ if (child.getAttribute("maxOccurs")) return child.getAttribute("maxOccurs");
             else return (sequence) ? "unbounded" : 1; }();
         this.from = child.getAttribute("type");
-        this.ns = ns;
+        this.ns = ns.url;
     }
 
-    function XsComplexType(child, type, sequence, ns) {
+    function XsComplexType(child, type, sequence, ns, uri) {
         this.id = child.getAttribute("id");
         this.name = child.getAttribute("name");
         this.type = type;
@@ -747,21 +768,21 @@ var xmlschema = function (schema) {
         this.from = "xs:complexType";
 
         if (type) {
-            this.xml = complexTypes[type].elem;
+            this.xml = ns.complexTypes[type].elem;
         } else {
             this.xml = child.getElementsByTagName("complexType")[0];
         }
-        this.ns = ns;
+        this.ns = uri;
     }
 
-    function XsAttribute(child) {
+    function XsAttribute(child, ns) {
         this.type = child.getAttribute("type");
         this.name = child.getAttribute("name");
         this.required = (child.getAttribute("use") && child.getAttribute("use") === "required");
         this.prohibited = (child.getAttribute("use") && child.getAttribute("use") === "prohibited");
 
         if (child.getAttribute("type")) {
-            this.xml = simpleTypes[child.getAttribute("type")].elem;
+            this.xml = ns.simpleTypes[child.getAttribute("type")].elem;
         } else if (child.getElementsByTagName("simpleType")) {
             this.xml = child.getElementsByTagName("simpleType")[0];
         }
@@ -769,18 +790,52 @@ var xmlschema = function (schema) {
         if (this.xml) {
             this.validator = new XsSimpleTypeValidator(this.xml, "@" + child.getAttribute("name"));
         }
+
+        this.ns = ns.url;
     }
 
-    function readAttributes(child, validation) {
+    function findNS(nsurl) {
+        var n;
+        namespaces.some(function (ns) {
+            if ((nsurl && ns.url === nsurl) || (!nsurl && ns.default)) {
+                n = ns;
+                return true; // break loop
+            }
+        });
+        if (!n) {
+            n = new NS(nsurl);
+            namespaces.push(n);
+        }
+        return n;
+    }
+
+    function collectNamespaces(node) {
+        var pfxs = {
+            prefixes: {}
+        };
+
+        Array.prototype.slice.call(node.attributes).forEach(function (attr) {
+            if (attr.name === "xmlns") {
+                pfxs.xmlns = attr.value;
+
+            } else if (attr.name.indexOf("xmlns:") > -1) {
+                var p = attr.name.replace(/xmlns:/, '');
+                pfxs[p] = attr.value;
+            }
+        });
+        return pfxs;
+    }
+
+    function readAttributes(child, validation, ns) {
         findbyname(child, "anyAttribute").forEach(function (any) {
            validation.attributes.push(new XsAnyAttribute(any));
         });
         findbyname(child, "attribute").forEach(function (attr) {
-            validation.attributes.push(new XsAttribute(attr));
+            validation.attributes.push(new XsAttribute(attr, ns));
         });
     }
 
-    function readElement(child, sequence, ns) {
+    function readElement(ns, child, sequence) {
         var validation;
 
         Array.prototype.slice.call(child.getElementsByTagName("unique")).forEach(function (uni) {
@@ -793,25 +848,26 @@ var xmlschema = function (schema) {
         });
 
         var type;
-        var nsnext;
+        var nstarget = ns;
         if (child.getAttribute("type")) {
-            if (child.getAttribute("type").indexOf(":") > -1) {
+            if (child.getAttribute("type").indexOf(":") > -1 && !/^xsi?:/.test(child.getAttribute("type"))) {
                 var spl = child.getAttribute("type").split(/:/);
-                var pfx = spl[0];
-                nsnext = nsprefix[pfx];
+                nstarget = findNS(ns.prefixes.prefixes[spl[0]]);
+                console.log (child.getAttribute("type"), nstarget);
                 type = spl[1];
             } else {
                 type = child.getAttribute("type");
             }
         }
 
-        if ((type && simpleTypes[type]) ||
-            child.getElementsByTagName("simpleType").length > 0) {
-            validation = new XsSimpleType(child, type, sequence, ns);
 
-        } else if ((type && complexTypes[type]) ||
+        if ((type && nstarget.simpleTypes[type]) ||
+            child.getElementsByTagName("simpleType").length > 0) {
+            validation = new XsSimpleType(child, type, sequence, nstarget);
+
+        } else if ((type && nstarget.complexTypes[type]) ||
             child.getElementsByTagName("complexType").length > 0) {
-            validation = new XsComplexType(child, type, sequence, ns);
+            validation = new XsComplexType(child, type, sequence, nstarget, ns.uri);
 
             function readSequence(elem) {
                 var seq = elem.getElementsByTagName("sequence")[0];
@@ -819,49 +875,49 @@ var xmlschema = function (schema) {
 
                 var gs = findbyname(elem, "group");
                 gs.forEach(function (group) {
-                    readSequence(groups[group.getAttribute("ref")].elem);
+                    readSequence(nstarget.groups[group.getAttribute("ref")].elem);
                 });
 
                 findbyname(elem, "attributeGroup").forEach(function (agref) {
-                    readAttributes(attributeGroups[agref.getAttribute("ref")].elem, validation);
+                    readAttributes(nstarget.attributeGroups[agref.getAttribute("ref")].elem, validation, nstarget);
                 });
 
                 var cc = elem.getElementsByTagName("complexContent")[0];
                 if (cc) {
                     var base = cc.getElementsByTagName("extension")[0].getAttribute("base");
-                    var extend = complexTypes[base].elem || gs[base].elem;
+                    var extend = nstarget.complexTypes[base].elem || gs[base].elem;
                     readSequence(extend);
                 }
 
                 if (seq) {
                     validation.sequence = true;
-                    constructTree(seq, validation.children, validation.sequence, ns);
+                    constructTree(seq, nstarget, validation.children, validation.sequence);
 
                 } else if (all) {
                     validation.sequence = false;
-                    constructTree(all, validation.children, validation.sequence, ns);
+                    constructTree(all, nstarget, validation.children, validation.sequence);
                 }
 
-                readAttributes(elem, validation);
+                readAttributes(elem, validation, nstarget);
             }
 
             readSequence(validation.xml);
 
         } else {
-            validation = new XsPrimitive(child, sequence, ns);
+            validation = new XsPrimitive(child, sequence, nstarget);
         }
 
         return validation;
     }
 
-    function constructTree (node, branch, sequence, ns) {
+    function constructTree (node, ns, branch, sequence) {
         var prev;
 
         node.childNodes.forEach(function(child) {
             var leaf;
 
             if (child.nodeType === Node.ELEMENT_NODE && child.tagName === "xs:element") {
-                leaf = (readElement(child, sequence, ns));
+                leaf = (readElement(ns, child, sequence));
 
             } else if (child.nodeType === Node.ELEMENT_NODE && child.tagName === "xs:choice") {
                 leaf = (new XsChoice(child, sequence, ns));
@@ -881,6 +937,8 @@ var xmlschema = function (schema) {
     function parseSchema(toparse, namespace, contree) {
         var def = xmlparser.deferred();
         var sub = [ false ];
+
+        var ns = findNS(namespace);
 
         xmlparser.parse(toparse).then(function (result) {
             function url (input, parentDocument, cb) {
@@ -909,12 +967,16 @@ var xmlschema = function (schema) {
                 }
                 if (go) {
                     if (contree) {
-                        constructTree(result.doc.firstChild, tree, false, null);
+                        ns.prefixes = collectNamespaces(result.doc.firstChild);
+                        console.log ("xsd namespaces:", ns.prefixes);
+                        constructTree(result.doc.firstChild, ns, tree, false);
+                        /*
                         Array.prototype.slice.call(result.doc.firstChild.attributes).forEach(function (attr) {
                            if (attr.name.indexOf("xmlns:") > -1 && attr.name !== "xmlns:xs") {
                                nsprefix[attr.name.replace(/^xmlns:/, '')] = attr.value;
                            }
                         });
+                        */
                     }
                     def.resolve(result);
                 }
@@ -942,13 +1004,13 @@ var xmlschema = function (schema) {
                         });
 
                     } else if (child.nodeType === Node.ELEMENT_NODE && child.tagName === "xs:simpleType") {
-                        simpleTypes[child.getAttribute("name")] = { elem: child, ns: namespace };
+                        ns.simpleTypes[child.getAttribute("name")] = { elem: child, ns: namespace };
                     } else if (child.nodeType === Node.ELEMENT_NODE && child.tagName === "xs:complexType") {
-                        complexTypes[child.getAttribute("name")] = { elem: child, ns: namespace };
+                        ns.complexTypes[child.getAttribute("name")] = { elem: child, ns: namespace };
                     } else if (child.nodeType === Node.ELEMENT_NODE && child.tagName === "xs:group") {
-                        groups[child.getAttribute("name")] = { elem: child, ns: namespace };
+                        ns.groups[child.getAttribute("name")] = { elem: child, ns: namespace };
                     } else if (child.nodeType === Node.ELEMENT_NODE && child.tagName === "xs:attributeGroup") {
-                        attributeGroups[child.getAttribute("name")] = { elem: child, ns: namespace };
+                        ns.attributeGroups[child.getAttribute("name")] = { elem: child, ns: namespace };
                     }
                 });
 
@@ -995,6 +1057,8 @@ var xmlschema = function (schema) {
             message: null,
             valid: false
         };
+
+        var xmlprefix = {};
 
         function error(message) {
             output.errors.push(message);
@@ -1043,12 +1107,22 @@ var xmlschema = function (schema) {
             });
         }
 
+
+
         function validateElement(nodes, branch, sequence) {
             var queue = [];
             var unexpected = [];
             var count = {};
             var last;
             var lastleaf;
+            var lasttag;
+
+            function taglookup(name) {
+                var sp = name.split(":");
+                var tag = (sp.length === 1) ? { name: sp[0] } : { prefix: sp[0], name: sp[1] };
+                tag.ns = xmlprefix.prefixes[tag.prefix] || xmlprefix.xmlns;
+                return tag;
+            }
 
             function countNode(name) {
                 if (!count[name]) {
@@ -1058,6 +1132,9 @@ var xmlschema = function (schema) {
                 }
 
                 last = name;
+                lasttag = taglookup(name);
+
+                console.debug("Element validated", lasttag.name, "[", lasttag.ns, "]");
             }
 
             nodes.forEach(function (element) {
@@ -1151,17 +1228,27 @@ var xmlschema = function (schema) {
                         var foundlast = false;
                         var foundcount = 0;
 
+                        var tag = taglookup(element.tagName);
+
+                        function tagmatcher(xmltag, name, xsdns) {
+                            if (!xmltag) return false;
+                            var tagmatch = xmltag.name === name;
+                            var nsmatches = (xmltag.ns === xsdns || !xmltag.prefix && !xsdns );
+                            return tagmatch && nsmatches;
+                        }
+
                         function scanner(leaf) {
+
                             function choice() {
                                 leaf.choices.forEach(function (choice) {
-                                    if (choice.name === last) {
+                                    if (tagmatcher(lasttag, choice.name, leaf.ns)){
                                         foundlast = true;
                                         return true;
                                     }
                                 });
 
                                 leaf.choices.forEach(function (choice) {
-                                    if ((!sequence || foundlast || !last) && element.tagName === choice.name) {
+                                    if ((!sequence || foundlast || !last) && tagmatcher(tag, choice.name, leaf.ns)) {
                                         nodefound(choice);
 
                                         return true;
@@ -1176,7 +1263,7 @@ var xmlschema = function (schema) {
                                 } else if (leaf instanceof XsAny && lastany == leaf.number) {
                                     foundlast = true;
 
-                                } else if (leaf.name === last) {
+                                } else if (tagmatcher(lasttag, leaf.name, leaf.ns)) {
                                     foundlast = true;
                                     foundcount++;
 
@@ -1189,7 +1276,7 @@ var xmlschema = function (schema) {
                                         anywatch = leaf;
                                     }
 
-                                    if (element.tagName === leaf.name) {
+                                    if (tagmatcher(tag, leaf.name, leaf.ns)) {
                                         nodefound(leaf);
                                         if (anywatch && anywatch.minOccurs > 0) {
                                             error("An element not specified by the schema is required " +
@@ -1206,7 +1293,7 @@ var xmlschema = function (schema) {
                                 }
 
                             } else {
-                                if (element.tagName === leaf.name) {
+                                if (tagmatcher(tag, leaf, leaf.ns)) {
                                     nodefound(leaf);
 
                                 } else if (leaf instanceof XsChoice) {
@@ -1353,6 +1440,8 @@ var xmlschema = function (schema) {
                         error(xml.error);
 
                     } else {
+                        xmlprefix = collectNamespaces(xml.doc.firstChild);
+                        console.log ("xml namespaces:", xmlprefix);
                         validateElement(xml.doc.childNodes, tree, true);
                         validateUnique();
                         output.valid = output.errors.length === 0;
@@ -1363,6 +1452,8 @@ var xmlschema = function (schema) {
                     }
 
                     deferred.resolve(output);
+
+
 
                 }).catch(function (message) {
                     console.log(message);
