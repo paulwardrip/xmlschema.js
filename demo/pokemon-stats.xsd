@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           targetNamespace="https://paulwardrip.github.io/xmlschema.js/demo/pokemon/stats">
+    <xs:complexType name="PokemonStats">
+        <xs:sequence>
+            <xs:element name="hp" type="xs:int" />
+            <xs:element name="defense" type="xs:int" />
+            <xs:element name="sp-defense" type="xs:int" />
+            <xs:element name="attack" type="xs:int" />
+            <xs:element name="sp-attack" type="xs:int" />
+        </xs:sequence>
+    </xs:complexType>
+</xs:schema>

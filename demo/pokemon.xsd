@@ -1,8 +1,11 @@
 <?xml version="1.0"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-    targetNamespace="https://paulwardrip.github.io/xmlschema.js/demo/pokemon">
+    targetNamespace="https://paulwardrip.github.io/xmlschema.js/demo/pokemon"
+    xmlns:stats="https://paulwardrip.github.io/xmlschema.js/demo/pokemon/stats">
 
     <xs:include schemaLocation="pokemon-common.xsd"/>
+
+    <xs:import namespace="https://paulwardrip.github.io/xmlschema.js/demo/pokemon/stats" schemaLocation="pokemon-stats.xsd" />
 
     <xs:element name="trainer" type="Trainer">
         <xs:unique name="PokemonID">
@@ -13,7 +16,6 @@
 
     <xs:attributeGroup name="PokemonAttributes">
         <xs:attribute name="level" use="required" />
-        <xs:attribute name="hpmax" use="required" />
         <xs:attribute name="hp" use="required" />
     </xs:attributeGroup>
 
@@ -41,8 +43,9 @@
 
     <xs:group name="PokemonElements">
         <xs:sequence>
-            <xs:element name="name" type="PokemonName" maxOccurs="1" minOccurs="1" />
+            <xs:element name="name" type="PokemonName" minOccurs="1" maxOccurs="1" />
             <xs:element name="type" type="PokemonType" minOccurs="1" maxOccurs="2" />
+            <xs:element name="stats" type="stats:PokemonStats" minOccurs="1" maxOccurs="1" />
         </xs:sequence>
     </xs:group>
 
