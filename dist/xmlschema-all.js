@@ -659,20 +659,11 @@ var xmlschema = function (schema) {
     }
 
     var xsd;
-    /*
-    var simpleTypes = {};
-    var complexTypes = {};
-    var attributeGroups = {};
-    var groups = {};
-    var nsprefix = {};
-     */
     var tree = [];
     var any = 0;
     var choice = 0;
     var unique = [];
     var namespaces = [];
-
-    var xsi = "/^xsi?:/";
 
     function NS(ns) {
         if (ns) {
@@ -853,7 +844,6 @@ var xmlschema = function (schema) {
             if (child.getAttribute("type").indexOf(":") > -1 && !/^xsi?:/.test(child.getAttribute("type"))) {
                 var spl = child.getAttribute("type").split(/:/);
                 nstarget = findNS(ns.prefixes.prefixes[spl[0]]);
-                console.log (child.getAttribute("type"), nstarget);
                 type = spl[1];
             } else {
                 type = child.getAttribute("type");
@@ -968,15 +958,7 @@ var xmlschema = function (schema) {
                 if (go) {
                     if (contree) {
                         ns.prefixes = collectNamespaces(result.doc.firstChild);
-                        console.log ("xsd namespaces:", ns.prefixes);
                         constructTree(result.doc.firstChild, ns, tree, false);
-                        /*
-                        Array.prototype.slice.call(result.doc.firstChild.attributes).forEach(function (attr) {
-                           if (attr.name.indexOf("xmlns:") > -1 && attr.name !== "xmlns:xs") {
-                               nsprefix[attr.name.replace(/^xmlns:/, '')] = attr.value;
-                           }
-                        });
-                        */
                     }
                     def.resolve(result);
                 }
@@ -1441,7 +1423,6 @@ var xmlschema = function (schema) {
 
                     } else {
                         xmlprefix = collectNamespaces(xml.doc.firstChild);
-                        console.log ("xml namespaces:", xmlprefix);
                         validateElement(xml.doc.childNodes, tree, true);
                         validateUnique();
                         output.valid = output.errors.length === 0;
