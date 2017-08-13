@@ -153,3 +153,5 @@ var xmljson = {
         return extract(doc);
     }
 };
+
+if (module) module.exports = xmljson;
