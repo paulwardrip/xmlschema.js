@@ -1,5 +1,5 @@
 {
-  "name": "xml-schema",
+  "name": "xmlschema.js",
   "version": "0.1.3",
   "description": "Implementation of XML schema validation in Javascript.",
   "main": "dist/xmlschema-all.min.js",
