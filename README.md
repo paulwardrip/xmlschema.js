@@ -1,21 +1,13 @@
 # xmlschema.js
-Implementation of XML schema validation in Javascript. 
+Implementation of XML schema validation in pure Javascript. 
 
-**Update** namespaces & xs:import are now supported.
-
-This supports most of the basic functions of xml schema validation. 
-Some features of the spec may not be implemented yet, these features may be provided in a future release.
-If you would like to report a bug or even contribute to the project, contact me: pwardrip@gmail.com
-
-The following features of the xsd are not implemented:
-
-* xs:key
-* xs:redefine
-* xs:union
+Most XSD functionality is implemented here, except for the following: xs:key, xs:redefine, xs:union
 
 
 # Installing
-You can install using bower:
+`npm install xmlschema`
+
+*or* You can install using bower:
 
 `bower install xmlschema.js`
 
