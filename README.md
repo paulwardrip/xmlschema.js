@@ -5,11 +5,15 @@ Most XSD functionality is implemented here, except for the following: xs:key, xs
 
 
 # Installing
-`npm install xmlschema`
+`npm install xmlschema.js`
 
 *or* You can install using bower:
 
 `bower install xmlschema.js`
+
+*or* yarn
+
+`yarn add xmlschema.js`
 
 # Usage
 
